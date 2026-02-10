@@ -2,62 +2,61 @@ package com.example.myapplication
 
 import android.content.Context
 import android.util.Log
-import org.linphone.core.Core
-import org.linphone.core.Factory
+import org.pjsip.pjsua2.Account
+import org.pjsip.pjsua2.AccountConfig
+import org.pjsip.pjsua2.AuthCredInfo
+import org.pjsip.pjsua2.Call
+import org.pjsip.pjsua2.CallOpParam
+import org.pjsip.pjsua2.Endpoint
+import org.pjsip.pjsua2.EpConfig
+import org.pjsip.pjsua2.TransportConfig
+import org.pjsip.pjsua2.pjsip_transport_type_e
+
 
 interface VoipManager {
     fun login(username: String, password: String, domain: String)
-    fun call(extension: String)
+    fun call(username: String, domain: String)
 }
 
-class VoipManagerV1(context: Context): VoipManager {
-    private val core: Core
-    private val factory = Factory.instance()
+class VoipManagerV1(context: Context) : VoipManager {
+    private lateinit var acc: Account
+    private var ep: Endpoint
 
-    init {
-        factory.setDebugMode(true, "Linphone")
-        AudioHook.install()
-        core = factory.createCore(null, null, context)
-        core.start()
-        core.enableMic(true)
+    companion object {
+        private const val TAG = "VoipManagerV1"
     }
 
-    fun iterate() {
-        core.iterate()
+    init {
+        System.loadLibrary("pjsua2")
+
+        ep = Endpoint()
+        ep.libCreate()
+        ep.libInit(EpConfig())
+        val sipTpConfig = TransportConfig()
+        sipTpConfig.port = 5060
+        ep.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_UDP, sipTpConfig)
+
+        ep.libStart()
     }
 
     override fun login(username: String, password: String, domain: String) {
-        val authInfo = Factory.instance().createAuthInfo(
-            username,
-            null,
-            password,
-            null,
-            null,
-            domain,
-        )
-        core.addAuthInfo(authInfo)
+        val accCfg = AccountConfig()
+        accCfg.idUri = "sip:$username@$domain"
+        accCfg.regConfig.registrarUri = "sip:$domain"
+        val cred = AuthCredInfo("digest", "*", username, 0, password)
+        accCfg.sipConfig.authCreds.add(cred)
 
-        val proxyConfig = core.createProxyConfig()
-        proxyConfig.identityAddress = factory.createAddress("sip:$username@$domain")
-        proxyConfig.serverAddr = factory.createAddress("sip:$domain")!!.asStringUriOnly()
-        proxyConfig.enableRegister(true)
-        core.addProxyConfig(proxyConfig)
-        core.defaultProxyConfig = proxyConfig
-
-//        val accountParams = core.createAccountParams()
-//        accountParams.identityAddress = Factory.instance().createAddress("sip:$username@$domain")
-//        accountParams.serverAddress = Factory.instance().createAddress("sip:$domain")
-//        accountParams.isRegisterEnabled = true
-//        val account = core.createAccount(accountParams)
-//
-//        core.addAuthInfo(authInfo)
-//        core.addAccount(account)
-//        core.defaultAccount = account
+        acc = Account()
+        acc.create(accCfg)
     }
 
-    override fun call(extension: String) {
-        val proxy = core.defaultProxyConfig ?: return
-        val address = factory.createAddress("sip:$extension@${proxy.domain}")
-        core.inviteAddress(address!!)
+    override fun call(username: String, domain: String) {
+        val call = Call(acc)
+        try {
+            call.makeCall("sip:$username@$domain", CallOpParam(true))
+        } catch (e: Exception) {
+            call.delete()
+            Log.e(TAG, "Failed to call", e)
+        }
     }
 }

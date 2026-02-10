@@ -1,10 +1,6 @@
 package com.example.myapplication
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,8 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.rememberScrollState
@@ -32,8 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -53,15 +45,6 @@ class MainActivity : ComponentActivity() {
 //        }
 
         voipManager = VoipManagerV1(this)
-
-        val handler = Handler(Looper.getMainLooper())
-        handler.post(object : Runnable {
-            override fun run() {
-                voipManager.iterate()
-                handler.postDelayed(this, 20)
-            }
-        })
-
         GgWaveBridge.init()
 
         enableEdgeToEdge()
@@ -78,7 +61,7 @@ fun VoipScreen(voipManager: VoipManager) {
     var username by remember { mutableStateOf("1001") }
     var password by remember { mutableStateOf("1234") }
     var domain by remember { mutableStateOf("192.168.31.245") }
-    var extension by remember { mutableStateOf("1002") }
+    var peerUsername by remember { mutableStateOf("1002") }
     var message by remember { mutableStateOf("Test") }
 
     Scaffold(
@@ -121,13 +104,13 @@ fun VoipScreen(voipManager: VoipManager) {
             Spacer(modifier = Modifier.height(24.dp))
 
             OutlinedTextField(
-                value = extension,
-                onValueChange = { extension = it },
+                value = peerUsername,
+                onValueChange = { peerUsername = it },
                 label = { Text("Call number") }
             )
 
             Button(onClick = {
-                voipManager.call(extension)
+                voipManager.call(peerUsername, domain)
             }) {
                 Text("CALL")
             }
@@ -143,7 +126,6 @@ fun VoipScreen(voipManager: VoipManager) {
             Button(onClick = {
                 val pcm = GgWaveBridge.encode(message)
 //                AudioPlayer.playPcm(pcm)
-                FakeMicBuffer.push(pcm)
             }) {
                 Text("ENCODE")
             }
@@ -161,5 +143,5 @@ fun VoipPreview() {
 
 class FakeVoipManager : VoipManager {
     override fun login(username: String, password: String, domain: String) {}
-    override fun call(extension: String) {}
+    override fun call(username: String, domain: String) {}
 }
