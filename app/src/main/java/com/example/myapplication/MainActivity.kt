@@ -125,6 +125,7 @@ fun VoipScreen(voipManager: VoipManager) {
 
             Button(onClick = {
                 val pcm = GgWaveBridge.encode(message)
+                voipManager.send(pcm)
 //                AudioPlayer.playPcm(pcm)
             }) {
                 Text("ENCODE")
@@ -143,5 +144,7 @@ fun VoipPreview() {
 
 class FakeVoipManager : VoipManager {
     override fun login(username: String, password: String, domain: String) {}
-    override fun call(username: String, domain: String) {}
+    override fun call(username: String, domain: String): Boolean { return true }
+    override fun hangup() {}
+    override fun send(pcm: ShortArray) {}
 }
