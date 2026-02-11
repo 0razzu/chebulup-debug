@@ -6,12 +6,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -109,10 +111,20 @@ fun VoipScreen(voipManager: VoipManager) {
                 label = { Text("Call number") }
             )
 
-            Button(onClick = {
-                voipManager.call(peerUsername, domain)
-            }) {
-                Text("CALL")
+            Row() {
+                Button(onClick = {
+                    voipManager.call(peerUsername, domain)
+                }) {
+                    Text("CALL")
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Button(onClick = {
+                    voipManager.hangup()
+                }) {
+                    Text("HANGUP")
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -144,7 +156,10 @@ fun VoipPreview() {
 
 class FakeVoipManager : VoipManager {
     override fun login(username: String, password: String, domain: String) {}
-    override fun call(username: String, domain: String): Boolean { return true }
+    override fun call(username: String, domain: String): Boolean {
+        return true
+    }
+
     override fun hangup() {}
     override fun send(pcm: ShortArray) {}
 }

@@ -29,7 +29,7 @@ interface VoipManager {
 class VoipManagerV1(context: Context) : VoipManager {
     private lateinit var acc: Account
     private var ep: Endpoint
-    private lateinit var call: Call
+    private var call: Call? = null
     private var player: AudioMediaPlayer? = null
 
     companion object {
@@ -61,26 +61,33 @@ class VoipManagerV1(context: Context) : VoipManager {
     }
 
     override fun call(username: String, domain: String): Boolean {
+        hangup()
         call = Call(acc)
         try {
-            call.makeCall("sip:$username@$domain", CallOpParam(true))
+            call!!.makeCall("sip:$username@$domain", CallOpParam(true))
             return true
         } catch (e: Exception) {
-            call.delete()
+            call!!.delete()
+            call = null
             Log.e(TAG, "Failed to call", e)
         }
         return false
     }
 
     override fun hangup() {
-        call.hangup(CallOpParam())
-        call.delete()
+        try {
+            call?.hangup(CallOpParam())
+        } catch (e: Exception) {
+            Log.i(TAG, "Failed to hangup", e)
+        }
+        call?.delete()
+        call = null
     }
 
     @OptIn(ExperimentalUuidApi::class)
     override fun send(pcm: ShortArray) {
         try {
-            if (!call.isActive) {
+            if (call == null || !call!!.isActive) {
                 Log.e(TAG, "No active call")
                 return
             }
@@ -92,7 +99,7 @@ class VoipManagerV1(context: Context) : VoipManager {
             player = AudioMediaPlayer()
             player!!.createPlayer(wavFile.absolutePath, PJMEDIA_FILE_NO_LOOP.toLong())
 
-            player!!.startTransmit(call.getAudioMedia(-1))
+            player!!.startTransmit(call!!.getAudioMedia(-1))
             Log.d(TAG, "Injected audio into call")
         } catch (e: Exception) {
             Log.e(TAG, "send() failed", e)
