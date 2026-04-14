@@ -21,14 +21,15 @@ import kotlin.uuid.Uuid
 
 interface VoipManager {
     fun login(username: String, password: String, domain: String)
-    fun call(username: String, domain: String): Boolean
+    fun call(username: String, domain: String)
     fun hangup()
     fun send(pcm: ShortArray)
 }
 
 class VoipManagerV1(context: Context) : VoipManager {
+    private val pjThread = PjThread()
     private lateinit var acc: Account
-    private var ep: Endpoint
+    private lateinit var ep: Endpoint
     private var call: Call? = null
     private var player: AudioMediaPlayer? = null
 
@@ -39,42 +40,52 @@ class VoipManagerV1(context: Context) : VoipManager {
     init {
         System.loadLibrary("pjsua2")
 
-        ep = Endpoint()
-        ep.libCreate()
-        ep.libInit(EpConfig())
-        val sipTpConfig = TransportConfig()
-        sipTpConfig.port = 5060
-        ep.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_UDP, sipTpConfig)
+        pjThread.run {
+            ep = Endpoint()
+            ep.libCreate()
+            ep.libInit(EpConfig())
+            val sipTpConfig = TransportConfig()
+            sipTpConfig.port = 5060
+            ep.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_UDP, sipTpConfig)
 
-        ep.libStart()
+            ep.libStart()
+        }
     }
 
     override fun login(username: String, password: String, domain: String) {
-        val accCfg = AccountConfig()
-        accCfg.idUri = "sip:$username@$domain"
-        accCfg.regConfig.registrarUri = "sip:$domain"
-        val cred = AuthCredInfo("digest", "*", username, 0, password)
-        accCfg.sipConfig.authCreds.add(cred)
+        pjThread.run {
+            registerThreadIfNeeded()
 
-        acc = Account()
-        acc.create(accCfg)
-    }
+            val accCfg = AccountConfig()
+            accCfg.idUri = "sip:$username@$domain"
+            accCfg.regConfig.registrarUri = "sip:$domain"
+            val cred = AuthCredInfo("digest", "*", username, 0, password)
+            accCfg.sipConfig.authCreds.add(cred)
 
-    override fun call(username: String, domain: String): Boolean {
-        hangup()
-        call = Call(acc)
-        try {
-            call!!.makeCall("sip:$username@$domain", CallOpParam(true))
-            return true
-        } catch (e: Exception) {
-            call!!.delete()
-            call = null
-            Log.e(TAG, "Failed to call", e)
+            acc = Account()
+            acc.create(accCfg)
         }
-        return false
     }
 
-    override fun hangup() {
+    override fun call(username: String, domain: String) {
+        pjThread.run {
+            registerThreadIfNeeded()
+
+            hangupInternal()
+            Log.d(TAG, "Calling")
+            call = Call(acc)
+            try {
+                call!!.makeCall("sip:$username@$domain", CallOpParam(true))
+            } catch (e: Exception) {
+                call!!.delete()
+                call = null
+                Log.e(TAG, "Failed to call", e)
+            }
+        }
+    }
+
+    private fun hangupInternal() {
+        Log.d(TAG, "Hanging up")
         try {
             call?.hangup(CallOpParam())
         } catch (e: Exception) {
@@ -84,25 +95,36 @@ class VoipManagerV1(context: Context) : VoipManager {
         call = null
     }
 
+    override fun hangup() {
+        pjThread.run {
+            registerThreadIfNeeded()
+            hangupInternal()
+        }
+    }
+
     @OptIn(ExperimentalUuidApi::class)
     override fun send(pcm: ShortArray) {
-        try {
-            if (call == null || !call!!.isActive) {
-                Log.e(TAG, "No active call")
-                return
+        pjThread.run {
+            try {
+                registerThreadIfNeeded()
+                
+                if (call == null || !call!!.isActive) {
+                    Log.e(TAG, "No active call")
+                    return@run
+                }
+
+                val wavFile = File.createTempFile("ggwave_${Uuid.random()}", ".wav")
+                writeWav(wavFile, pcm)
+
+                player?.delete()
+                player = AudioMediaPlayer()
+                player!!.createPlayer(wavFile.absolutePath, PJMEDIA_FILE_NO_LOOP.toLong())
+
+                player!!.startTransmit(call!!.getAudioMedia(-1))
+                Log.d(TAG, "Injected audio into call")
+            } catch (e: Exception) {
+                Log.e(TAG, "send() failed", e)
             }
-
-            val wavFile = File.createTempFile("ggwave_${Uuid.random()}", ".wav")
-            writeWav(wavFile, pcm)
-
-            player?.delete()
-            player = AudioMediaPlayer()
-            player!!.createPlayer(wavFile.absolutePath, PJMEDIA_FILE_NO_LOOP.toLong())
-
-            player!!.startTransmit(call!!.getAudioMedia(-1))
-            Log.d(TAG, "Injected audio into call")
-        } catch (e: Exception) {
-            Log.e(TAG, "send() failed", e)
         }
     }
 
@@ -114,19 +136,23 @@ class VoipManagerV1(context: Context) : VoipManager {
 
         FileOutputStream(file).use { out ->
             fun writeIntLE(v: Int) {
-                out.write(byteArrayOf(
-                    (v and 0xff).toByte(),
-                    ((v shr 8) and 0xff).toByte(),
-                    ((v shr 16) and 0xff).toByte(),
-                    ((v shr 24) and 0xff).toByte()
-                ))
+                out.write(
+                    byteArrayOf(
+                        (v and 0xff).toByte(),
+                        ((v shr 8) and 0xff).toByte(),
+                        ((v shr 16) and 0xff).toByte(),
+                        ((v shr 24) and 0xff).toByte(),
+                    ),
+                )
             }
 
             fun writeShortLE(v: Int) {
-                out.write(byteArrayOf(
-                    (v and 0xff).toByte(),
-                    ((v shr 8) and 0xff).toByte()
-                ))
+                out.write(
+                    byteArrayOf(
+                        (v and 0xff).toByte(),
+                        ((v shr 8) and 0xff).toByte(),
+                    ),
+                )
             }
 
             out.write("RIFF".toByteArray())

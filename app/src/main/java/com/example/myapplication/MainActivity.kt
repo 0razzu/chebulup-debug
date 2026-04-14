@@ -29,6 +29,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.min
 
 class MainActivity : ComponentActivity() {
     private lateinit var voipManager: VoipManagerV1
@@ -67,7 +72,7 @@ fun VoipScreen(voipManager: VoipManager) {
     var message by remember { mutableStateOf("Test") }
 
     Scaffold(
-        contentWindowInsets = WindowInsets.safeDrawing
+        contentWindowInsets = WindowInsets.safeDrawing,
     ) { padding ->
         val scrollState = rememberScrollState()
 
@@ -77,29 +82,31 @@ fun VoipScreen(voipManager: VoipManager) {
                 .padding(24.dp)
                 .fillMaxSize()
                 .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("Username") }
+                label = { Text("Username") },
             )
 
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") }
+                label = { Text("Password") },
             )
 
             OutlinedTextField(
                 value = domain,
                 onValueChange = { domain = it },
-                label = { Text("Asterisk IP") }
+                label = { Text("Asterisk IP") },
             )
 
-            Button(onClick = {
-                voipManager.login(username, password, domain)
-            }) {
+            Button(
+                onClick = {
+                    voipManager.login(username, password, domain)
+                },
+            ) {
                 Text("LOGIN")
             }
 
@@ -108,21 +115,25 @@ fun VoipScreen(voipManager: VoipManager) {
             OutlinedTextField(
                 value = peerUsername,
                 onValueChange = { peerUsername = it },
-                label = { Text("Call number") }
+                label = { Text("Call number") },
             )
 
             Row() {
-                Button(onClick = {
-                    voipManager.call(peerUsername, domain)
-                }) {
+                Button(
+                    onClick = {
+                        voipManager.call(peerUsername, domain)
+                    },
+                ) {
                     Text("CALL")
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                Button(onClick = {
-                    voipManager.hangup()
-                }) {
+                Button(
+                    onClick = {
+                        voipManager.hangup()
+                    },
+                ) {
                     Text("HANGUP")
                 }
             }
@@ -132,14 +143,25 @@ fun VoipScreen(voipManager: VoipManager) {
             OutlinedTextField(
                 value = message,
                 onValueChange = { message = it },
-                label = { Text("Message") }
+                label = { Text("Message") },
             )
 
-            Button(onClick = {
-                val pcm = GgWaveBridge.encode(message)
-                voipManager.send(pcm)
+            Button(
+                onClick = {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val lenPcm = GgWaveBridge.encode(message.length.toString())
+                        voipManager.send(lenPcm)
+
+                        for (i in 0..<message.length step 140) {
+                            val end = min(i + 140, message.length) - 1
+                            val pcm = GgWaveBridge.encode(message.slice(IntRange(i, end)))
+                            delay(8000)
+                            voipManager.send(pcm)
+                        }
 //                AudioPlayer.playPcm(pcm)
-            }) {
+                    }
+                },
+            ) {
                 Text("ENCODE")
             }
         }
@@ -156,10 +178,7 @@ fun VoipPreview() {
 
 class FakeVoipManager : VoipManager {
     override fun login(username: String, password: String, domain: String) {}
-    override fun call(username: String, domain: String): Boolean {
-        return true
-    }
-
+    override fun call(username: String, domain: String) {}
     override fun hangup() {}
     override fun send(pcm: ShortArray) {}
 }
