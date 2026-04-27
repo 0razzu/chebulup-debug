@@ -2,6 +2,8 @@ package com.example.myapplication
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import org.pjsip.pjsua2.Account
 import org.pjsip.pjsua2.AccountConfig
 import org.pjsip.pjsua2.AudioMediaPlayer
@@ -15,6 +17,7 @@ import org.pjsip.pjsua2.pjmedia_file_player_option.PJMEDIA_FILE_NO_LOOP
 import org.pjsip.pjsua2.pjsip_transport_type_e
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.CountDownLatch
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -107,21 +110,40 @@ class VoipManagerV1(context: Context) : VoipManager {
         pjThread.run {
             try {
                 registerThreadIfNeeded()
-                
+
                 if (call == null || !call!!.isActive) {
                     Log.e(TAG, "No active call")
                     return@run
                 }
 
+                Log.d(TAG, "HERE1")
+
                 val wavFile = File.createTempFile("ggwave_${Uuid.random()}", ".wav")
                 writeWav(wavFile, pcm)
 
-                player?.delete()
-                player = AudioMediaPlayer()
-                player!!.createPlayer(wavFile.absolutePath, PJMEDIA_FILE_NO_LOOP.toLong())
+                Log.d(TAG, "HERE2")
 
+                val latch = CountDownLatch(1)
+
+                Log.d(TAG, "HERE3")
+
+                player?.delete()
+                Log.d(TAG, "HERE4")
+                player = object : AudioMediaPlayer() {
+                    override fun onEof2() {
+                        latch.countDown()
+                    }
+                }
+                Log.d(TAG, "HERE5")
+                player!!.createPlayer(wavFile.absolutePath, PJMEDIA_FILE_NO_LOOP.toLong())
+                Log.d(TAG, "HERE6")
                 player!!.startTransmit(call!!.getAudioMedia(-1))
+                Log.d(TAG, "HERE7")
+
+                latch.await()
                 Log.d(TAG, "Injected audio into call")
+                wavFile.delete()
+                Log.d(TAG, "HERE8")
             } catch (e: Exception) {
                 Log.e(TAG, "send() failed", e)
             }

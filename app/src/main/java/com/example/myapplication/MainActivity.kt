@@ -65,10 +65,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun VoipScreen(voipManager: VoipManager) {
-    var username by remember { mutableStateOf("1001") }
+    var username by remember { mutableStateOf("1003") }
     var password by remember { mutableStateOf("1234") }
     var domain by remember { mutableStateOf("192.168.31.245") }
-    var peerUsername by remember { mutableStateOf("1002") }
+    var peerUsername by remember { mutableStateOf("550") }
     var message by remember { mutableStateOf("Test") }
 
     Scaffold(
@@ -118,7 +118,7 @@ fun VoipScreen(voipManager: VoipManager) {
                 label = { Text("Call number") },
             )
 
-            Row() {
+            Row {
                 Button(
                     onClick = {
                         voipManager.call(peerUsername, domain)
@@ -155,7 +155,6 @@ fun VoipScreen(voipManager: VoipManager) {
                         for (i in 0..<message.length step 140) {
                             val end = min(i + 140, message.length) - 1
                             val pcm = GgWaveBridge.encode(message.slice(IntRange(i, end)))
-                            delay(8000)
                             voipManager.send(pcm)
                         }
 //                AudioPlayer.playPcm(pcm)
