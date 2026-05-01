@@ -1,7 +1,6 @@
 package com.example.myapplication
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -54,7 +53,7 @@ class MainActivity : ComponentActivity() {
 //            )
 //        }
 
-        voipManager = VoipManagerV1(this)
+        voipManager = VoipManagerV1()
         GgWaveBridge.init()
 
         enableEdgeToEdge()
@@ -170,8 +169,6 @@ fun VoipScreen(voipManager: VoipManager) {
                             voipManager.play(wavFile)
                         }
                     }
-
-                    Log.d(tag, "Finished transmission of $message")
                 },
             ) {
                 Text("ENCODE")

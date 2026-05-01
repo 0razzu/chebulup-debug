@@ -1,7 +1,5 @@
 package com.example.myapplication
 
-import android.content.Context
-import android.os.Environment
 import android.util.Log
 import org.pjsip.pjsua2.Account
 import org.pjsip.pjsua2.AccountConfig
@@ -29,7 +27,7 @@ interface VoipManager {
     fun play(wavFile: File)
 }
 
-class VoipManagerV1(private val ctx: Context) : VoipManager {
+class VoipManagerV1 : VoipManager {
     private val pjThread = PjThread()
     private lateinit var acc: Account
     private lateinit var ep: Endpoint
@@ -151,12 +149,12 @@ class VoipManagerV1(private val ctx: Context) : VoipManager {
             for (s in pcm) writeShortLE(s.toInt())
         }
 
-        val debugFile = File(
-            ctx.getExternalFilesDir(Environment.DIRECTORY_MUSIC),
-            "ggwave_${System.currentTimeMillis()}.wav",
-        )
-        file.copyTo(debugFile, overwrite = true)
-        Log.d(TAG, "Saved debug WAV to ${debugFile.absolutePath}")
+//        val debugFile = File(
+//            ctx.getExternalFilesDir(Environment.DIRECTORY_MUSIC),
+//            "ggwave_${System.currentTimeMillis()}.wav",
+//        )
+//        file.copyTo(debugFile, overwrite = true)
+//        Log.d(TAG, "Saved debug WAV to ${debugFile.absolutePath}")
 
         return file
     }
