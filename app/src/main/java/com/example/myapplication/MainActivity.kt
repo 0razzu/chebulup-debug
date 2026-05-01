@@ -31,8 +31,10 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
+import java.io.File
 import kotlin.math.min
 
 class MainActivity : ComponentActivity() {
@@ -149,15 +151,21 @@ fun VoipScreen(voipManager: VoipManager) {
             Button(
                 onClick = {
                     CoroutineScope(Dispatchers.IO).launch {
-                        val lenPcm = GgWaveBridge.encode(message.length.toString())
-                        voipManager.send(lenPcm)
-
-                        for (i in 0..<message.length step 140) {
-                            val end = min(i + 140, message.length) - 1
-                            val pcm = GgWaveBridge.encode(message.slice(IntRange(i, end)))
-                            voipManager.send(pcm)
+                        val pcmChunks = buildList {
+                            add(GgWaveBridge.encode(message.length.toString()))
+                            for (i in 0..<message.length step 140) {
+                                val end = min(i + 140, message.length) - 1
+                                add(GgWaveBridge.encode(message.slice(IntRange(i, end))))
+                            }
                         }
-//                AudioPlayer.playPcm(pcm)
+
+                        val wavFiles = pcmChunks.map { pcm ->
+                            async { voipManager.write(pcm) }
+                        }
+
+                        wavFiles.awaitAll().forEach { wavFile ->
+                            voipManager.play(wavFile)
+                        }
                     }
                 },
             ) {
@@ -179,5 +187,10 @@ class FakeVoipManager : VoipManager {
     override fun login(username: String, password: String, domain: String) {}
     override fun call(username: String, domain: String) {}
     override fun hangup() {}
-    override fun send(pcm: ShortArray) {}
+
+    override fun write(pcm: ShortArray): File {
+        throw NotImplementedError()
+    }
+
+    override fun play(wavFile: File) {}
 }

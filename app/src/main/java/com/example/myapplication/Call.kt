@@ -1,9 +1,8 @@
 package com.example.myapplication
 
 import android.content.Context
+import android.os.Environment
 import android.util.Log
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import org.pjsip.pjsua2.Account
 import org.pjsip.pjsua2.AccountConfig
 import org.pjsip.pjsua2.AudioMediaPlayer
@@ -26,10 +25,11 @@ interface VoipManager {
     fun login(username: String, password: String, domain: String)
     fun call(username: String, domain: String)
     fun hangup()
-    fun send(pcm: ShortArray)
+    fun write(pcm: ShortArray): File
+    fun play(wavFile: File)
 }
 
-class VoipManagerV1(context: Context) : VoipManager {
+class VoipManagerV1(private val ctx: Context) : VoipManager {
     private val pjThread = PjThread()
     private lateinit var acc: Account
     private lateinit var ep: Endpoint
@@ -106,56 +106,13 @@ class VoipManagerV1(context: Context) : VoipManager {
     }
 
     @OptIn(ExperimentalUuidApi::class)
-    override fun send(pcm: ShortArray) {
-        pjThread.run {
-            try {
-                registerThreadIfNeeded()
-
-                if (call == null || !call!!.isActive) {
-                    Log.e(TAG, "No active call")
-                    return@run
-                }
-
-                Log.d(TAG, "HERE1")
-
-                val wavFile = File.createTempFile("ggwave_${Uuid.random()}", ".wav")
-                writeWav(wavFile, pcm)
-
-                Log.d(TAG, "HERE2")
-
-                val latch = CountDownLatch(1)
-
-                Log.d(TAG, "HERE3")
-
-                player?.delete()
-                Log.d(TAG, "HERE4")
-                player = object : AudioMediaPlayer() {
-                    override fun onEof2() {
-                        latch.countDown()
-                    }
-                }
-                Log.d(TAG, "HERE5")
-                player!!.createPlayer(wavFile.absolutePath, PJMEDIA_FILE_NO_LOOP.toLong())
-                Log.d(TAG, "HERE6")
-                player!!.startTransmit(call!!.getAudioMedia(-1))
-                Log.d(TAG, "HERE7")
-
-                latch.await()
-                Log.d(TAG, "Injected audio into call")
-                wavFile.delete()
-                Log.d(TAG, "HERE8")
-            } catch (e: Exception) {
-                Log.e(TAG, "send() failed", e)
-            }
-        }
-    }
-
-    private fun writeWav(file: File, pcm: ShortArray) {
+    override fun write(pcm: ShortArray): File {
         val sampleRate = 48000
         val byteRate = sampleRate * 2
         val dataSize = pcm.size * 2
         val totalSize = 36 + dataSize
 
+        val file = File.createTempFile("ggwave_${Uuid.random()}", ".wav")
         FileOutputStream(file).use { out ->
             fun writeIntLE(v: Int) {
                 out.write(
@@ -192,6 +149,47 @@ class VoipManagerV1(context: Context) : VoipManager {
             writeIntLE(dataSize)
 
             for (s in pcm) writeShortLE(s.toInt())
+        }
+
+        val debugFile = File(
+            ctx.getExternalFilesDir(Environment.DIRECTORY_MUSIC),
+            "ggwave_${System.currentTimeMillis()}.wav",
+        )
+        file.copyTo(debugFile, overwrite = true)
+        Log.d(TAG, "Saved debug WAV to ${debugFile.absolutePath}")
+
+        return file
+    }
+
+    override fun play(wavFile: File) {
+        pjThread.run {
+            registerThreadIfNeeded()
+
+            try {
+                if (call == null || !call!!.isActive) {
+                    Log.e(TAG, "No active call")
+                    return@run
+                }
+
+                val latch = CountDownLatch(1)
+
+                player?.delete()
+                player = object : AudioMediaPlayer() {
+                    override fun onEof2() {
+                        Log.d(TAG, "CALLBACK")
+                        latch.countDown()
+                    }
+                }
+                player!!.createPlayer(wavFile.absolutePath, PJMEDIA_FILE_NO_LOOP.toLong())
+                Log.d(TAG, "START TRANSMIT")
+                player!!.startTransmit(call!!.getAudioMedia(-1))
+
+                latch.await()
+            } catch (e: Exception) {
+                Log.e(TAG, "play() failed", e)
+            } finally {
+                wavFile.delete()
+            }
         }
     }
 }
