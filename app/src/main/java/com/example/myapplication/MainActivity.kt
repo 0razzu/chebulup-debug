@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -67,6 +68,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun VoipScreen(voipManager: VoipManager) {
+    val tag = "VoipScreen"
+
     var username by remember { mutableStateOf("1003") }
     var password by remember { mutableStateOf("1234") }
     var domain by remember { mutableStateOf("192.168.31.245") }
@@ -160,13 +163,15 @@ fun VoipScreen(voipManager: VoipManager) {
                         }
 
                         val wavFiles = pcmChunks.map { pcm ->
-                            async { voipManager.write(pcm) }
+                            async { voipManager.write(pcm.trimSilence()) }
                         }
 
                         wavFiles.awaitAll().forEach { wavFile ->
                             voipManager.play(wavFile)
                         }
                     }
+
+                    Log.d(tag, "Finished transmission of $message")
                 },
             ) {
                 Text("ENCODE")

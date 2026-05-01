@@ -176,12 +176,12 @@ class VoipManagerV1(private val ctx: Context) : VoipManager {
                 player?.delete()
                 player = object : AudioMediaPlayer() {
                     override fun onEof2() {
-                        Log.d(TAG, "CALLBACK")
+                        Log.d(TAG, "Finishing transmission of ${wavFile.name}")
                         latch.countDown()
                     }
                 }
                 player!!.createPlayer(wavFile.absolutePath, PJMEDIA_FILE_NO_LOOP.toLong())
-                Log.d(TAG, "START TRANSMIT")
+                Log.d(TAG, "Starting transmission of ${wavFile.name}")
                 player!!.startTransmit(call!!.getAudioMedia(-1))
 
                 latch.await()
