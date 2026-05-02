@@ -51,3 +51,40 @@ Java_com_example_myapplication_GgWaveBridge_encode(JNIEnv *env, jobject, jstring
 
     return res;
 }
+
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_com_example_myapplication_GgWaveBridge_decode(
+    JNIEnv *env,
+    jobject,
+    jshortArray pcm
+) {
+    jsize len = env->GetArrayLength(pcm);
+    jshort* input = env->GetShortArrayElements(pcm, nullptr);
+
+    char res[1024];
+
+    int decodedSize = ggwave_decode(
+        g_ggwave,
+        input,
+        len * sizeof(short),
+        res
+    );
+
+    env->ReleaseShortArrayElements(pcm, input, JNI_ABORT);
+
+    if (decodedSize <= 0) {
+        return nullptr;
+    }
+
+    jbyteArray resBytes = env->NewByteArray(decodedSize);
+    env->SetByteArrayRegion(
+        resBytes,
+        0,
+        decodedSize,
+        reinterpret_cast<jbyte*>(res)
+    );
+
+    return resBytes;
+}

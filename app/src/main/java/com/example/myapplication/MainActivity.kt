@@ -32,7 +32,6 @@ import com.example.myapplication.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.min
@@ -67,7 +66,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun VoipScreen(voipManager: VoipManager) {
-    val tag = "VoipScreen"
+    val logTag = "VoipScreen"
 
     var username by remember { mutableStateOf("1003") }
     var password by remember { mutableStateOf("1234") }
