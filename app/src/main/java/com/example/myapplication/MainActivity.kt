@@ -165,7 +165,8 @@ fun VoipScreen(voipManager: VoipManager) {
                             async { voipManager.write(pcm.trimSilence()) }
                         }
 
-                        wavFiles.awaitAll().forEach { wavFile ->
+                        wavFiles.forEach { fut ->
+                            val wavFile = fut.await()
                             voipManager.play(wavFile)
                         }
                     }
