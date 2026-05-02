@@ -1,6 +1,10 @@
 package com.example.myapplication
 
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import org.pjsip.pjsua2.Account
 import org.pjsip.pjsua2.AccountConfig
 import org.pjsip.pjsua2.AudioMediaPlayer
@@ -15,6 +19,7 @@ import org.pjsip.pjsua2.pjsip_transport_type_e
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.CountDownLatch
+import kotlin.math.min
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -23,8 +28,8 @@ interface VoipManager {
     fun login(username: String, password: String, domain: String)
     fun call(username: String, domain: String)
     fun hangup()
-    fun write(pcm: ShortArray): File
-    fun play(wavFile: File)
+    fun send(text: String)
+    fun send(data: ByteArray)
 }
 
 class VoipManagerV1 : VoipManager {
@@ -103,8 +108,35 @@ class VoipManagerV1 : VoipManager {
         }
     }
 
+    override fun send(text: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val pcmChunks = buildList {
+                val header = "$PAYLOAD_VERSION${PayloadType.TEXT}${text.length}"
+                add(GgWaveBridge.encode(header))
+
+                for (i in 0..<text.length step 140) {
+                    val end = min(i + 140, text.length) - 1
+                    add(GgWaveBridge.encode(text.slice(IntRange(i, end))))
+                }
+            }
+
+            val wavFiles = pcmChunks.map { pcm ->
+                async { write(pcm.trimSilence()) }
+            }
+
+            wavFiles.forEach { fut ->
+                val wavFile = fut.await()
+                play(wavFile)
+            }
+        }
+    }
+
+    override fun send(data: ByteArray) {
+
+    }
+
     @OptIn(ExperimentalUuidApi::class)
-    override fun write(pcm: ShortArray): File {
+    private fun write(pcm: ShortArray): File {
         val sampleRate = 48000
         val byteRate = sampleRate * 2
         val dataSize = pcm.size * 2
@@ -159,7 +191,7 @@ class VoipManagerV1 : VoipManager {
         return file
     }
 
-    override fun play(wavFile: File) {
+    private fun play(wavFile: File) {
         pjThread.run {
             registerThreadIfNeeded()
 

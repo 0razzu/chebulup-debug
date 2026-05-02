@@ -29,12 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.theme.MyApplicationTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
-import java.io.File
-import kotlin.math.min
 
 class MainActivity : ComponentActivity() {
     private lateinit var voipManager: VoipManagerV1
@@ -151,24 +145,7 @@ fun VoipScreen(voipManager: VoipManager) {
 
             Button(
                 onClick = {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        val pcmChunks = buildList {
-                            add(GgWaveBridge.encode(message.length.toString()))
-                            for (i in 0..<message.length step 140) {
-                                val end = min(i + 140, message.length) - 1
-                                add(GgWaveBridge.encode(message.slice(IntRange(i, end))))
-                            }
-                        }
-
-                        val wavFiles = pcmChunks.map { pcm ->
-                            async { voipManager.write(pcm.trimSilence()) }
-                        }
-
-                        wavFiles.forEach { fut ->
-                            val wavFile = fut.await()
-                            voipManager.play(wavFile)
-                        }
-                    }
+                    voipManager.send(message)
                 },
             ) {
                 Text("ENCODE")
@@ -189,10 +166,6 @@ class FakeVoipManager : VoipManager {
     override fun login(username: String, password: String, domain: String) {}
     override fun call(username: String, domain: String) {}
     override fun hangup() {}
-
-    override fun write(pcm: ShortArray): File {
-        throw NotImplementedError()
-    }
-
-    override fun play(wavFile: File) {}
+    override fun send(text: String) {}
+    override fun send(data: ByteArray) {}
 }
