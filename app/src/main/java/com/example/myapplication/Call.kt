@@ -109,37 +109,20 @@ class VoipManagerV1 : VoipManager {
     }
 
     override fun send(text: String) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val pcmChunks = buildList {
-                val header = "$PAYLOAD_VERSION${PayloadType.TEXT}${text.length}"
-                add(GgWaveBridge.encodeText(header))
-
-                for (i in 0..<text.length step 140) {
-                    val end = min(i + 140, text.length) - 1
-                    add(GgWaveBridge.encodeText(text.substring(i, end)))
-                }
-            }
-
-            val wavFiles = pcmChunks.map { pcm ->
-                async { write(pcm.trimSilence()) }
-            }
-
-            wavFiles.forEach { fut ->
-                val wavFile = fut.await()
-                play(wavFile)
-            }
-        }
+        send(PayloadV1(PayloadType.TEXT, text.toByteArray()))
     }
 
     override fun send(data: ByteArray) {
+        send(PayloadV1(PayloadType.DATA, data))
+    }
+
+    private fun send(payload: Payload) {
         CoroutineScope(Dispatchers.IO).launch {
             val pcmChunks = buildList {
-                val header = "$PAYLOAD_VERSION${PayloadType.DATA}${data.size}"
-                add(GgWaveBridge.encodeText(header))
-
-                for (i in 0..<data.size step 140) {
-                    val end = min(i + 140, data.size)
-                    add(GgWaveBridge.encodeBytes(data.copyOfRange(i, end)))
+                val payloadBytes = payload.toByteArray()
+                for (i in 0..<payloadBytes.size step 140) {
+                    val end = min(i + 140, payloadBytes.size)
+                    add(GgWaveBridge.encode(payloadBytes.copyOfRange(i, end)))
                 }
             }
 
