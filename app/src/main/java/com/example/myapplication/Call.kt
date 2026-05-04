@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
 import org.pjsip.pjsua2.Account
 import org.pjsip.pjsua2.AccountConfig
 import org.pjsip.pjsua2.AudioMediaPlayer
@@ -18,6 +19,7 @@ import org.pjsip.pjsua2.pjmedia_file_player_option.PJMEDIA_FILE_NO_LOOP
 import org.pjsip.pjsua2.pjsip_transport_type_e
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
 import java.util.concurrent.CountDownLatch
 import kotlin.math.min
 import kotlin.uuid.ExperimentalUuidApi
@@ -30,18 +32,18 @@ interface VoipManager {
     fun hangup()
     fun send(text: String)
     fun send(data: ByteArray)
+    fun sendChunked(stream: InputStream, size: Long, chunkSize: Int = 512)
 }
 
 class VoipManagerV1 : VoipManager {
+    private val logTag = "VoipManagerV1"
+
     private val pjThread = PjThread()
     private lateinit var acc: Account
     private lateinit var ep: Endpoint
     private var call: Call? = null
     private var player: AudioMediaPlayer? = null
-
-    companion object {
-        private const val TAG = "VoipManagerV1"
-    }
+    private val sendRawSem: Semaphore = Semaphore(16)
 
     init {
         System.loadLibrary("pjsua2")
@@ -78,24 +80,24 @@ class VoipManagerV1 : VoipManager {
             registerThreadIfNeeded()
 
             hangupInternal()
-            Log.d(TAG, "Calling")
+            Log.d(logTag, "Calling")
             call = Call(acc)
             try {
                 call!!.makeCall("sip:$username@$domain", CallOpParam(true))
             } catch (e: Exception) {
                 call!!.delete()
                 call = null
-                Log.e(TAG, "Failed to call", e)
+                Log.e(logTag, "Failed to call", e)
             }
         }
     }
 
     private fun hangupInternal() {
-        Log.d(TAG, "Hanging up")
+        Log.d(logTag, "Hanging up")
         try {
             call?.hangup(CallOpParam())
         } catch (e: Exception) {
-            Log.i(TAG, "Failed to hangup", e)
+            Log.i(logTag, "Failed to hangup", e)
         }
         call?.delete()
         call = null
@@ -114,6 +116,44 @@ class VoipManagerV1 : VoipManager {
 
     override fun send(data: ByteArray) {
         send(PayloadV1(PayloadType.DATA, data))
+    }
+
+    override fun sendChunked(stream: InputStream, size: Long, chunkSize: Int) {
+        Log.d(logTag, "sendChunked(size=$size, chunkSize=$chunkSize)")
+        CoroutineScope(Dispatchers.IO).launch {
+            val header: PayloadHeader = PayloadHeaderV1(PayloadType.DATA, size)
+            sendRaw(header.toByteArray())
+
+            val chunk = ByteArray(chunkSize)
+            var read: Int
+            stream.use {
+                while (it.read(chunk).also { read = it } != -1) {
+                    sendRaw(chunk.copyOfRange(0, read))
+                }
+            }
+        }
+    }
+
+    private suspend fun sendRaw(data: ByteArray) {
+        Log.d(logTag, "sendRaw(), data size: ${data.size}")
+
+        sendRawSem.acquire()
+        try {
+            val pcmChunks = buildList {
+                for (i in 0..<data.size step 140) {
+                    val end = min(i + 140, data.size)
+                    add(GgWaveBridge.encode(data.copyOfRange(i, end)))
+                }
+            }
+
+            val wavFiles = pcmChunks.map { pcm ->
+                write(pcm.trimSilence())
+            }
+
+            wavFiles.forEach { play(it) }
+        } finally {
+            sendRawSem.release()
+        }
     }
 
     private fun send(payload: Payload) {
@@ -139,6 +179,8 @@ class VoipManagerV1 : VoipManager {
 
     @OptIn(ExperimentalUuidApi::class)
     private fun write(pcm: ShortArray): File {
+        Log.d(logTag, "write()")
+
         val sampleRate = 48000
         val byteRate = sampleRate * 2
         val dataSize = pcm.size * 2
@@ -199,7 +241,7 @@ class VoipManagerV1 : VoipManager {
 
             try {
                 if (call == null || !call!!.isActive) {
-                    Log.e(TAG, "No active call")
+                    Log.e(logTag, "No active call")
                     return@run
                 }
 
@@ -208,17 +250,17 @@ class VoipManagerV1 : VoipManager {
                 player?.delete()
                 player = object : AudioMediaPlayer() {
                     override fun onEof2() {
-                        Log.d(TAG, "Finishing transmission of ${wavFile.name}")
+                        Log.d(logTag, "Finishing transmission of ${wavFile.name}")
                         latch.countDown()
                     }
                 }
                 player!!.createPlayer(wavFile.absolutePath, PJMEDIA_FILE_NO_LOOP.toLong())
-                Log.d(TAG, "Starting transmission of ${wavFile.name}")
+                Log.d(logTag, "Starting transmission of ${wavFile.name}")
                 player!!.startTransmit(call!!.getAudioMedia(-1))
 
                 latch.await()
             } catch (e: Exception) {
-                Log.e(TAG, "play() failed", e)
+                Log.e(logTag, "play() failed", e)
             } finally {
                 wavFile.delete()
             }

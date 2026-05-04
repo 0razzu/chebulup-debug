@@ -20,17 +20,37 @@ abstract class Payload(val v: Byte) {
 }
 
 
+abstract class PayloadHeader(val v: Byte) {
+    abstract fun toByteArray(): ByteArray
+}
+
+
 class PayloadV1(
     val type: PayloadType,
     val data: ByteArray,
 ) : Payload(1) {
     override fun toByteArray(): ByteArray {
-        val buf = ByteBuffer.allocate(1 + 1 + 4 + data.size)
+        val buf = ByteBuffer.allocate(1 + 1 + 8 + data.size)
 
         buf.put(v)
         buf.put(type.toByte())
-        buf.putInt(data.size)
+        buf.putLong(data.size.toLong())
         buf.put(data)
+
+        return buf.array()
+    }
+}
+
+class PayloadHeaderV1(
+    val type: PayloadType,
+    val size: Long,
+) : PayloadHeader(1) {
+    override fun toByteArray(): ByteArray {
+        val buf = ByteBuffer.allocate(1 + 1 + 8)
+
+        buf.put(v)
+        buf.put(type.toByte())
+        buf.putLong(size)
 
         return buf.array()
     }
