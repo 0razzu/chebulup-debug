@@ -28,7 +28,7 @@ Java_com_example_myapplication_GgWaveBridge_encode(JNIEnv *env, jobject, jbyteAr
         g_ggwave,
         msg,
         len,
-        GGWAVE_PROTOCOL_AUDIBLE_FAST,
+        GGWAVE_PROTOCOL_AUDIBLE_FASTEST,
         10,
         nullptr,
         1
@@ -38,7 +38,7 @@ Java_com_example_myapplication_GgWaveBridge_encode(JNIEnv *env, jobject, jbyteAr
         g_ggwave,
         msg,
         len,
-        GGWAVE_PROTOCOL_AUDIBLE_FAST,
+        GGWAVE_PROTOCOL_AUDIBLE_FASTEST,
         10,
         (char*)pcm.data(),
         0
