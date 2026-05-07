@@ -1,4 +1,4 @@
-package com.example.myapplication
+package io.orazzu.chebulup_debug
 
 import org.junit.Test
 

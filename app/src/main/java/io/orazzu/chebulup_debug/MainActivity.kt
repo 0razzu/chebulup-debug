@@ -1,4 +1,4 @@
-package com.example.myapplication
+package io.orazzu.chebulup_debug
 
 import android.net.Uri
 import android.os.Bundle
@@ -33,7 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.myapplication.ui.theme.MyApplicationTheme
+import io.orazzu.chebulup_debug.ui.theme.MyApplicationTheme
 import java.io.InputStream
 
 class MainActivity : ComponentActivity() {
