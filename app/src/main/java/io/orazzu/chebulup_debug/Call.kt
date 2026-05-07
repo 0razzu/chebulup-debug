@@ -32,7 +32,7 @@ interface VoipManager {
     fun hangup()
     fun send(text: String)
     fun send(data: ByteArray)
-    fun sendChunked(stream: InputStream, size: Long, name: String?, chunkSize: Int = 512)
+    fun sendChunked(stream: InputStream, size: Long, name: String?, chunkSize: Int = 560)
 }
 
 class VoipManagerV1 : VoipManager {
