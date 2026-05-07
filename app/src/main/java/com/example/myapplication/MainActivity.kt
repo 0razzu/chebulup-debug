@@ -203,9 +203,14 @@ fun VoipScreen(voipManager: VoipManager) {
                             }
                             Log.d(logTag, "created stream")
 
+                            var name = fileUri.lastPathSegment!!
+                            name = name.removeRange(0, name.lastIndexOf('/') + 1)
+                            Log.d(logTag, "Passing name $name")
+
                             voipManager.sendChunked(
                                 stream,
                                 size,
+                                name,
                             )
                         }
                     },
@@ -237,5 +242,5 @@ class FakeVoipManager : VoipManager {
     override fun hangup() {}
     override fun send(text: String) {}
     override fun send(data: ByteArray) {}
-    override fun sendChunked(stream: InputStream, size: Long, chunkSize: Int) {}
+    override fun sendChunked(stream: InputStream, size: Long, name: String?, chunkSize: Int) {}
 }

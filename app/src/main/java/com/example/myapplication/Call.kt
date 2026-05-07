@@ -32,7 +32,7 @@ interface VoipManager {
     fun hangup()
     fun send(text: String)
     fun send(data: ByteArray)
-    fun sendChunked(stream: InputStream, size: Long, chunkSize: Int = 512)
+    fun sendChunked(stream: InputStream, size: Long, name: String?, chunkSize: Int = 512)
 }
 
 class VoipManagerV1 : VoipManager {
@@ -111,17 +111,17 @@ class VoipManagerV1 : VoipManager {
     }
 
     override fun send(text: String) {
-        send(PayloadV1(PayloadType.TEXT, text.toByteArray()))
+        send(PayloadV1(PayloadType.TEXT, null, text.toByteArray()))
     }
 
     override fun send(data: ByteArray) {
-        send(PayloadV1(PayloadType.DATA, data))
+        send(PayloadV1(PayloadType.DATA, null, data))
     }
 
-    override fun sendChunked(stream: InputStream, size: Long, chunkSize: Int) {
+    override fun sendChunked(stream: InputStream, size: Long, name: String?, chunkSize: Int) {
         Log.d(logTag, "sendChunked(size=$size, chunkSize=$chunkSize)")
         CoroutineScope(Dispatchers.IO).launch {
-            val header: PayloadHeader = PayloadHeaderV1(PayloadType.DATA, size)
+            val header: PayloadHeader = PayloadHeaderV1(PayloadType.DATA, size.toULong(), name)
             sendRaw(header.toByteArray())
 
             val chunk = ByteArray(chunkSize)
