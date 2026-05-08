@@ -1,4 +1,4 @@
-package io.orazzu.chebulup_debug
+package io.orazzu.chebulupdebug
 
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
@@ -25,14 +25,30 @@ import kotlin.math.min
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-
 interface VoipManager {
-    fun login(username: String, password: String, domain: String)
-    fun call(username: String, domain: String)
+    fun login(
+        username: String,
+        password: String,
+        domain: String,
+    )
+
+    fun call(
+        username: String,
+        domain: String,
+    )
+
     fun hangup()
+
     fun send(text: String)
+
     fun send(data: ByteArray)
-    fun sendChunked(stream: InputStream, size: Long, name: String?, chunkSize: Int = 560)
+
+    fun sendChunked(
+        stream: InputStream,
+        size: Long,
+        name: String?,
+        chunkSize: Int = 560,
+    )
 }
 
 class VoipManagerV1 : VoipManager {
@@ -60,7 +76,11 @@ class VoipManagerV1 : VoipManager {
         }
     }
 
-    override fun login(username: String, password: String, domain: String) {
+    override fun login(
+        username: String,
+        password: String,
+        domain: String,
+    ) {
         pjThread.run {
             registerThreadIfNeeded()
 
@@ -75,7 +95,10 @@ class VoipManagerV1 : VoipManager {
         }
     }
 
-    override fun call(username: String, domain: String) {
+    override fun call(
+        username: String,
+        domain: String,
+    ) {
         pjThread.run {
             registerThreadIfNeeded()
 
@@ -118,7 +141,12 @@ class VoipManagerV1 : VoipManager {
         send(PayloadV1(PayloadType.DATA, null, data))
     }
 
-    override fun sendChunked(stream: InputStream, size: Long, name: String?, chunkSize: Int) {
+    override fun sendChunked(
+        stream: InputStream,
+        size: Long,
+        name: String?,
+        chunkSize: Int,
+    ) {
         Log.d(logTag, "sendChunked(size=$size, chunkSize=$chunkSize)")
         CoroutineScope(Dispatchers.IO).launch {
             val header: PayloadHeader = PayloadHeaderV1(PayloadType.DATA, size.toULong(), name)
@@ -139,16 +167,18 @@ class VoipManagerV1 : VoipManager {
 
         sendRawSem.acquire()
         try {
-            val pcmChunks = buildList {
-                for (i in 0..<data.size step 140) {
-                    val end = min(i + 140, data.size)
-                    add(GgWaveBridge.encode(data.copyOfRange(i, end)))
+            val pcmChunks =
+                buildList {
+                    for (i in 0..<data.size step 140) {
+                        val end = min(i + 140, data.size)
+                        add(GgWaveBridge.encode(data.copyOfRange(i, end)))
+                    }
                 }
-            }
 
-            val wavFiles = pcmChunks.map { pcm ->
-                write(pcm.trimSilence())
-            }
+            val wavFiles =
+                pcmChunks.map { pcm ->
+                    write(pcm.trimSilence())
+                }
 
             wavFiles.forEach { play(it) }
         } finally {
@@ -158,17 +188,19 @@ class VoipManagerV1 : VoipManager {
 
     private fun send(payload: Payload) {
         CoroutineScope(Dispatchers.IO).launch {
-            val pcmChunks = buildList {
-                val payloadBytes = payload.toByteArray()
-                for (i in 0..<payloadBytes.size step 140) {
-                    val end = min(i + 140, payloadBytes.size)
-                    add(GgWaveBridge.encode(payloadBytes.copyOfRange(i, end)))
+            val pcmChunks =
+                buildList {
+                    val payloadBytes = payload.toByteArray()
+                    for (i in 0..<payloadBytes.size step 140) {
+                        val end = min(i + 140, payloadBytes.size)
+                        add(GgWaveBridge.encode(payloadBytes.copyOfRange(i, end)))
+                    }
                 }
-            }
 
-            val wavFiles = pcmChunks.map { pcm ->
-                async { write(pcm.trimSilence()) }
-            }
+            val wavFiles =
+                pcmChunks.map { pcm ->
+                    async { write(pcm.trimSilence()) }
+                }
 
             wavFiles.forEach { fut ->
                 val wavFile = fut.await()
@@ -248,12 +280,13 @@ class VoipManagerV1 : VoipManager {
                 val latch = CountDownLatch(1)
 
                 player?.delete()
-                player = object : AudioMediaPlayer() {
-                    override fun onEof2() {
-                        Log.d(logTag, "Finishing transmission of ${wavFile.name}")
-                        latch.countDown()
+                player =
+                    object : AudioMediaPlayer() {
+                        override fun onEof2() {
+                            Log.d(logTag, "Finishing transmission of ${wavFile.name}")
+                            latch.countDown()
+                        }
                     }
-                }
                 player!!.createPlayer(wavFile.absolutePath, PJMEDIA_FILE_NO_LOOP.toLong())
                 Log.d(logTag, "Starting transmission of ${wavFile.name}")
                 player!!.startTransmit(call!!.getAudioMedia(-1))

@@ -1,4 +1,4 @@
-package io.orazzu.chebulup_debug
+package io.orazzu.chebulupdebug
 
 import kotlin.math.abs
 
@@ -16,9 +16,12 @@ fun crc16(data: ByteArray): UShort {
     for (byte in data) {
         crc = crc xor (byte.toInt() and 0xFF shl 8)
         repeat(8) {
-            crc = if (crc and 0x8000 != 0)
+            crc =
+                if (crc and 0x8000 != 0) {
                     (crc shl 1) xor 0x1021
-                    else crc shl 1
+                } else {
+                    crc shl 1
+                }
         }
     }
     return (crc and 0xFFFF).toUShort()

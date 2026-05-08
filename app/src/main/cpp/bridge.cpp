@@ -9,7 +9,7 @@ static ggwave_Instance g_ggwave;
 
 
 extern "C"
-JNIEXPORT void JNICALL Java_io_orazzu_chebulup_1debug_GgWaveBridge_init(JNIEnv * env, jobject obj) {
+JNIEXPORT void JNICALL Java_io_orazzu_chebulupdebug_GgWaveBridge_init(JNIEnv * env, jobject obj) {
     ggwave_Parameters parameters = ggwave_getDefaultParameters();
     parameters.sampleFormatInp = GGWAVE_SAMPLE_FORMAT_I16;
     parameters.sampleFormatOut = GGWAVE_SAMPLE_FORMAT_I16;
@@ -20,7 +20,7 @@ JNIEXPORT void JNICALL Java_io_orazzu_chebulup_1debug_GgWaveBridge_init(JNIEnv *
 
 extern "C"
 JNIEXPORT jshortArray JNICALL
-Java_io_orazzu_chebulup_1debug_GgWaveBridge_encode(JNIEnv *env, jobject, jbyteArray data) {
+Java_io_orazzu_chebulupdebug_GgWaveBridge_encode(JNIEnv *env, jobject, jbyteArray data) {
     jbyte* msg = env->GetByteArrayElements(data, nullptr);
     jsize len = env->GetArrayLength(data);
 
@@ -55,7 +55,7 @@ Java_io_orazzu_chebulup_1debug_GgWaveBridge_encode(JNIEnv *env, jobject, jbyteAr
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_io_orazzu_chebulup_1debug_GgWaveBridge_decode(
+Java_io_orazzu_chebulupdebug_GgWaveBridge_decode(
     JNIEnv *env,
     jobject,
     jshortArray pcm

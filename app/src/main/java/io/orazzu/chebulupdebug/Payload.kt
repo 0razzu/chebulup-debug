@@ -1,11 +1,13 @@
-package io.orazzu.chebulup_debug
+package io.orazzu.chebulupdebug
 
 import java.nio.ByteBuffer
 
-
-enum class PayloadType(private val serialized: Byte) {
+enum class PayloadType(
+    private val serialized: Byte,
+) {
     DATA(0b00),
-    TEXT(0b01);
+    TEXT(0b01),
+    ;
 
     fun toByte(): Byte = serialized
 
@@ -14,36 +16,34 @@ enum class PayloadType(private val serialized: Byte) {
     }
 }
 
-
-abstract class Payload(val v: Byte) {
+abstract class Payload(
+    val v: Byte,
+) {
     abstract fun toByteArray(): ByteArray
 }
 
-
-abstract class PayloadHeader(val v: Byte) {
+abstract class PayloadHeader(
+    val v: Byte,
+) {
     abstract fun toByteArray(): ByteArray
 }
-
 
 class PayloadV1(
     val type: PayloadType,
     val name: String?,
     val data: ByteArray,
 ) : Payload(1) {
-    override fun toByteArray(): ByteArray {
-        return when (type) {
+    override fun toByteArray(): ByteArray =
+        when (type) {
             PayloadType.DATA -> toByteArrayData()
             PayloadType.TEXT -> toByteArrayText()
         }
-    }
-
 
     private fun toByteArrayCommon(buf: ByteBuffer) {
         buf.put(v)
         buf.put(type.toByte())
         buf.putLong(data.size.toLong())
     }
-
 
     private fun toByteArrayData(): ByteArray {
         val nameLen = (name?.length ?: 0).toUShort()
@@ -58,7 +58,6 @@ class PayloadV1(
 
         return buf.array()
     }
-
 
     private fun toByteArrayText(): ByteArray {
         val buf = ByteBuffer.allocate(1 + 1 + 8 + data.size)
@@ -75,20 +74,17 @@ class PayloadHeaderV1(
     val size: ULong,
     val name: String?,
 ) : PayloadHeader(1) {
-    override fun toByteArray(): ByteArray {
-        return when (type) {
+    override fun toByteArray(): ByteArray =
+        when (type) {
             PayloadType.DATA -> toByteArrayData()
             PayloadType.TEXT -> toByteArrayText()
         }
-    }
-
 
     private fun toByteArrayCommon(buf: ByteBuffer) {
         buf.put(v)
         buf.put(type.toByte())
         buf.putLong(size.toLong())
     }
-
 
     private fun toByteArrayData(): ByteArray {
         val nameLen = (name?.length ?: 0).toUShort()
@@ -102,7 +98,6 @@ class PayloadHeaderV1(
 
         return buf.array()
     }
-
 
     private fun toByteArrayText(): ByteArray {
         val buf = ByteBuffer.allocate(1 + 1 + 8)

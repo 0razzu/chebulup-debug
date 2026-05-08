@@ -1,4 +1,4 @@
-package io.orazzu.chebulup_debug
+package io.orazzu.chebulupdebug
 
 object GgWaveBridge {
     init {
@@ -6,6 +6,8 @@ object GgWaveBridge {
     }
 
     external fun init()
+
     external fun encode(data: ByteArray): ShortArray
+
     external fun decode(pcm: ShortArray): ByteArray?
 }

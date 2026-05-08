@@ -1,4 +1,4 @@
-package io.orazzu.chebulup_debug.ui.theme
+package io.orazzu.chebulupdebug.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

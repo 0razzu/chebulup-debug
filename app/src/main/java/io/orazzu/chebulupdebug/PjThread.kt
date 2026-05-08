@@ -1,4 +1,4 @@
-package io.orazzu.chebulup_debug
+package io.orazzu.chebulupdebug
 
 import android.os.Handler
 import android.os.HandlerThread
@@ -12,7 +12,6 @@ class PjThread {
         handler.post(block)
     }
 }
-
 
 fun registerThreadIfNeeded() {
     try {

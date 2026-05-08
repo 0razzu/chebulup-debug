@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "io.orazzu.chebulup_debug"
+    namespace = "io.orazzu.chebulupdebug"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "io.orazzu.chebulup_debug"
+        applicationId = "io.orazzu.chebulupdebug"
         minSdk = 22
         targetSdk = 36
         versionCode = 1
@@ -34,7 +34,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }

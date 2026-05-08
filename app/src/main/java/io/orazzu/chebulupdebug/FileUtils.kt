@@ -1,4 +1,4 @@
-package io.orazzu.chebulup_debug
+package io.orazzu.chebulupdebug
 
 import android.content.Context
 import android.net.Uri
@@ -6,7 +6,10 @@ import android.provider.OpenableColumns
 import java.io.InputStream
 
 object FileUtils {
-    fun getSize(uri: Uri, ctx: Context): Long? {
+    fun getSize(
+        uri: Uri,
+        ctx: Context,
+    ): Long? {
         val cursor = ctx.contentResolver.query(uri, null, null, null, null)
 
         cursor?.use {
@@ -20,8 +23,8 @@ object FileUtils {
         return null
     }
 
-
-    fun getStream(uri: Uri, ctx: Context): InputStream? {
-        return ctx.contentResolver.openInputStream(uri)
-    }
+    fun getStream(
+        uri: Uri,
+        ctx: Context,
+    ): InputStream? = ctx.contentResolver.openInputStream(uri)
 }

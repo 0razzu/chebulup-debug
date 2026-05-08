@@ -1,4 +1,4 @@
-package io.orazzu.chebulup_debug
+package io.orazzu.chebulupdebug
 
 import android.net.Uri
 import android.os.Bundle
@@ -33,7 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.orazzu.chebulup_debug.ui.theme.MyApplicationTheme
+import io.orazzu.chebulupdebug.ui.theme.MyApplicationTheme
 import java.io.InputStream
 
 class MainActivity : ComponentActivity() {
@@ -74,13 +74,14 @@ fun VoipScreen(voipManager: VoipManager) {
     var domain by rememberSaveable { mutableStateOf("192.168.31.245") }
     var peerUsername by rememberSaveable { mutableStateOf("550") }
     var message by rememberSaveable { mutableStateOf("Test") }
-    var selectedFileUri by rememberSaveable() { mutableStateOf<Uri?>(null) }
+    var selectedFileUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-    ) { uri: Uri? ->
-        selectedFileUri = uri
-    }
+    val filePickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent(),
+        ) { uri: Uri? ->
+            selectedFileUri = uri
+        }
 
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -88,11 +89,12 @@ fun VoipScreen(voipManager: VoipManager) {
         val scrollState = rememberScrollState()
 
         Column(
-            modifier = Modifier
-                .padding(padding)
-                .padding(24.dp)
-                .fillMaxSize()
-                .verticalScroll(scrollState),
+            modifier =
+                Modifier
+                    .padding(padding)
+                    .padding(24.dp)
+                    .fillMaxSize()
+                    .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             OutlinedTextField(
@@ -219,11 +221,15 @@ fun VoipScreen(voipManager: VoipManager) {
                 }
             }
 
-            Text(text = (
-                if (selectedFileUri != null)
-                    "Selected: $selectedFileUri" else
-                    "No file selected"
-            ))
+            Text(
+                text = (
+                    if (selectedFileUri != null) {
+                        "Selected: $selectedFileUri"
+                    } else {
+                        "No file selected"
+                    }
+                ),
+            )
         }
     }
 }
@@ -237,10 +243,27 @@ fun VoipPreview() {
 }
 
 class FakeVoipManager : VoipManager {
-    override fun login(username: String, password: String, domain: String) {}
-    override fun call(username: String, domain: String) {}
+    override fun login(
+        username: String,
+        password: String,
+        domain: String,
+    ) {}
+
+    override fun call(
+        username: String,
+        domain: String,
+    ) {}
+
     override fun hangup() {}
+
     override fun send(text: String) {}
+
     override fun send(data: ByteArray) {}
-    override fun sendChunked(stream: InputStream, size: Long, name: String?, chunkSize: Int) {}
+
+    override fun sendChunked(
+        stream: InputStream,
+        size: Long,
+        name: String?,
+        chunkSize: Int,
+    ) {}
 }
