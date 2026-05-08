@@ -14,7 +14,7 @@ fun ShortArray.trimSilence(threshold: Short = 100): ShortArray {
 fun crc16(data: ByteArray): UShort {
     var crc = 0
     for (byte in data) {
-        crc = crc xor (byte.toInt() and 0xFF shl 8)
+        crc = crc xor ((byte.toInt() and 0xFF) shl 8)
         repeat(8) {
             crc =
                 if (crc and 0x8000 != 0) {
