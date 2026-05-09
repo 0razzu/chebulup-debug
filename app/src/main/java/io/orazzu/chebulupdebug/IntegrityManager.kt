@@ -44,8 +44,8 @@ object IntegrityManager {
             signedChunk[chunkSize + i] = ((seqNo shr ((SEQ_NO_SIZE - 1 - i) * 8)) and 0xFFu).toByte()
         }
 
-        val checksum = crc16(signedChunk, 0, chunkSize).toInt()
         val checksumOffset = chunkSize + SEQ_NO_SIZE
+        val checksum = crc16(signedChunk, 0, checksumOffset).toInt()
         signedChunk[checksumOffset] = (checksum shr 8).toByte()
         signedChunk[checksumOffset + 1] = checksum.toByte()
 
