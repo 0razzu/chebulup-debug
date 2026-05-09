@@ -25,7 +25,7 @@ import kotlin.math.min
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-const val RAW_GGWAVE_CHUNK_SIZE = 140 - CHECKSUM_SIZE
+const val RAW_GGWAVE_CHUNK_SIZE = 140 - INTEGRITY_BYTES
 
 interface VoipManager {
     fun login(
@@ -173,7 +173,15 @@ class VoipManagerV1 : VoipManager {
                 buildList {
                     for (offset in 0..<data.size step RAW_GGWAVE_CHUNK_SIZE) {
                         val end = min(offset + RAW_GGWAVE_CHUNK_SIZE, data.size)
-                        add(GgWaveBridge.encode(appendChecksum(data, offset, end)))
+                        add(
+                            GgWaveBridge.encode(
+                                IntegrityManager.sign(
+                                    data,
+                                    offset,
+                                    end,
+                                ),
+                            ),
+                        )
                     }
                 }
 
@@ -195,7 +203,15 @@ class VoipManagerV1 : VoipManager {
                     val payloadBytes = payload.toByteArray()
                     for (offset in 0..<payloadBytes.size step RAW_GGWAVE_CHUNK_SIZE) {
                         val end = min(offset + RAW_GGWAVE_CHUNK_SIZE, payloadBytes.size)
-                        add(GgWaveBridge.encode(appendChecksum(payloadBytes, offset, end)))
+                        add(
+                            GgWaveBridge.encode(
+                                IntegrityManager.sign(
+                                    payloadBytes,
+                                    offset,
+                                    end,
+                                ),
+                            ),
+                        )
                     }
                 }
 
