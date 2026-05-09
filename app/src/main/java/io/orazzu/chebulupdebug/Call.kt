@@ -25,6 +25,8 @@ import kotlin.math.min
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+const val RAW_GGWAVE_CHUNK_SIZE = 140 - CHECKSUM_SIZE
+
 interface VoipManager {
     fun login(
         username: String,
@@ -47,7 +49,7 @@ interface VoipManager {
         stream: InputStream,
         size: Long,
         name: String?,
-        chunkSize: Int = 560,
+        chunkSize: Int = 552,
     )
 }
 
@@ -156,7 +158,7 @@ class VoipManagerV1 : VoipManager {
             var read: Int
             stream.use {
                 while (it.read(chunk).also { read = it } != -1) {
-                    sendRaw(chunk.copyOfRange(0, read))
+                    sendRaw(if (read == chunkSize) chunk else chunk.copyOfRange(0, read))
                 }
             }
         }
@@ -169,9 +171,9 @@ class VoipManagerV1 : VoipManager {
         try {
             val pcmChunks =
                 buildList {
-                    for (i in 0..<data.size step 140) {
-                        val end = min(i + 140, data.size)
-                        add(GgWaveBridge.encode(data.copyOfRange(i, end)))
+                    for (offset in 0..<data.size step RAW_GGWAVE_CHUNK_SIZE) {
+                        val end = min(offset + RAW_GGWAVE_CHUNK_SIZE, data.size)
+                        add(GgWaveBridge.encode(appendChecksum(data, offset, end)))
                     }
                 }
 
@@ -191,9 +193,9 @@ class VoipManagerV1 : VoipManager {
             val pcmChunks =
                 buildList {
                     val payloadBytes = payload.toByteArray()
-                    for (i in 0..<payloadBytes.size step 140) {
-                        val end = min(i + 140, payloadBytes.size)
-                        add(GgWaveBridge.encode(payloadBytes.copyOfRange(i, end)))
+                    for (offset in 0..<payloadBytes.size step RAW_GGWAVE_CHUNK_SIZE) {
+                        val end = min(offset + RAW_GGWAVE_CHUNK_SIZE, payloadBytes.size)
+                        add(GgWaveBridge.encode(appendChecksum(payloadBytes, offset, end)))
                     }
                 }
 

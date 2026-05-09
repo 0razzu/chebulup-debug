@@ -28,6 +28,16 @@ abstract class PayloadHeader(
     abstract fun toByteArray(): ByteArray
 }
 
+enum class PayloadV1Sizes(
+    val value: Int,
+) {
+    VERSION(1),
+    TYPE(1),
+    SIZE(8),
+    NAME_LEN(2),
+    CHECKSUM(2),
+}
+
 class PayloadV1(
     val type: PayloadType,
     val name: String?,
@@ -47,7 +57,15 @@ class PayloadV1(
 
     private fun toByteArrayData(): ByteArray {
         val nameLen = (name?.length ?: 0).toUShort()
-        val buf = ByteBuffer.allocate(1 + 1 + 8 + 2 + nameLen.toInt() + data.size)
+        val buf =
+            ByteBuffer.allocate(
+                PayloadV1Sizes.VERSION.value +
+                    PayloadV1Sizes.TYPE.value +
+                    PayloadV1Sizes.SIZE.value +
+                    PayloadV1Sizes.NAME_LEN.value +
+                    nameLen.toInt() +
+                    data.size,
+            )
 
         toByteArrayCommon(buf)
         buf.putShort(nameLen.toShort())
@@ -60,7 +78,12 @@ class PayloadV1(
     }
 
     private fun toByteArrayText(): ByteArray {
-        val buf = ByteBuffer.allocate(1 + 1 + 8 + data.size)
+        val buf =
+            ByteBuffer.allocate(
+                PayloadV1Sizes.VERSION.value +
+                    PayloadV1Sizes.TYPE.value +
+                    PayloadV1Sizes.SIZE.value + data.size,
+            )
 
         toByteArrayCommon(buf)
         buf.put(data)
@@ -88,7 +111,13 @@ class PayloadHeaderV1(
 
     private fun toByteArrayData(): ByteArray {
         val nameLen = (name?.length ?: 0).toUShort()
-        val buf = ByteBuffer.allocate(1 + 1 + 8 + 2 + nameLen.toInt())
+        val buf =
+            ByteBuffer.allocate(
+                PayloadV1Sizes.VERSION.value +
+                    PayloadV1Sizes.TYPE.value +
+                    PayloadV1Sizes.SIZE.value +
+                    PayloadV1Sizes.NAME_LEN.value + nameLen.toInt(),
+            )
 
         toByteArrayCommon(buf)
         buf.putShort(nameLen.toShort())
@@ -100,7 +129,12 @@ class PayloadHeaderV1(
     }
 
     private fun toByteArrayText(): ByteArray {
-        val buf = ByteBuffer.allocate(1 + 1 + 8)
+        val buf =
+            ByteBuffer.allocate(
+                PayloadV1Sizes.VERSION.value +
+                    PayloadV1Sizes.TYPE.value +
+                    PayloadV1Sizes.SIZE.value,
+            )
 
         toByteArrayCommon(buf)
 
