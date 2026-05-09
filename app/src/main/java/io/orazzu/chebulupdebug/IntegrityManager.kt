@@ -39,15 +39,15 @@ object IntegrityManager {
         val signedChunk = ByteArray(chunkSize + INTEGRITY_BYTES)
         System.arraycopy(chunk, begin, signedChunk, 0, chunkSize)
 
-        val checksum = crc16(signedChunk, 0, chunkSize).toInt()
-        signedChunk[chunkSize] = (checksum shr 8).toByte()
-        signedChunk[chunkSize + 1] = checksum.toByte()
-
         val seqNo = nextSeqNo.getAndIncrement().toUInt()
-        val seqNoOffset = chunkSize + CHECKSUM_SIZE
         for (i in 0..<SEQ_NO_SIZE) {
-            signedChunk[seqNoOffset + i] = ((seqNo shr ((SEQ_NO_SIZE - 1 - i) * 8)) and 0xFFu).toByte()
+            signedChunk[chunkSize + i] = ((seqNo shr ((SEQ_NO_SIZE - 1 - i) * 8)) and 0xFFu).toByte()
         }
+
+        val checksum = crc16(signedChunk, 0, chunkSize).toInt()
+        val checksumOffset = chunkSize + SEQ_NO_SIZE
+        signedChunk[checksumOffset] = (checksum shr 8).toByte()
+        signedChunk[checksumOffset + 1] = checksum.toByte()
 
         return signedChunk
     }
