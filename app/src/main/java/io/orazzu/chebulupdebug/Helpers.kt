@@ -13,7 +13,11 @@ fun ShortArray.trimSilence(threshold: Short = 100): ShortArray {
 
 const val CHECKSUM_SIZE = 2
 
-fun crc16(data: ByteArray, begin: Int, end: Int): UShort {
+fun crc16(
+    data: ByteArray,
+    begin: Int,
+    end: Int,
+): UShort {
     var crc = 0
     for (i in begin..<end) {
         val byte = data[i]
@@ -30,7 +34,11 @@ fun crc16(data: ByteArray, begin: Int, end: Int): UShort {
     return (crc and 0xFFFF).toUShort()
 }
 
-fun appendChecksum(chunk: ByteArray, begin: Int, end: Int): ByteArray {
+fun appendChecksum(
+    chunk: ByteArray,
+    begin: Int,
+    end: Int,
+): ByteArray {
     val chunkSize = end - begin
     val signedChunk = ByteArray(chunkSize + CHECKSUM_SIZE)
     System.arraycopy(chunk, begin, signedChunk, 0, chunkSize)
