@@ -49,7 +49,7 @@ interface VoipManager {
         stream: InputStream,
         size: Long,
         name: String?,
-        chunkSize: Int = 552,
+        chunkSize: Int = 5 * RAW_GGWAVE_CHUNK_SIZE,
     )
 }
 
